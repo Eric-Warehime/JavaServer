@@ -2,6 +2,9 @@ import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 
 public final class Server {
 	private final int serverPort;
@@ -47,12 +50,36 @@ public final class Server {
 		return true;
 	}
 
+	public void parseRequest() throws IOException {
+		
+			String requestLine = fromClientStream.readLine();
+			String delims = "[ ]";
+			String [] requestTokens = requestLine.split(delims);
+			if (requestTokens[0].equals("HEAD")) {
+				String [] requestOutput = new String[7];
+				requestOutput[0] = requestTokens[2] + " 200 OK";
+				requestOutput[1] = "Connection: close";
+				
+				DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
+				Date dateobj = new Date();
+				requestOutput[2] = df.format(dateobj);
+				requestOutput[3] = "Server: Eric/Shuaib's Server!!!";
+				requestOutput[4] = "Last-Modified: TBD";
+				requestOutput[5] = "Content-Length: TBD";
+				requestOutput[6] = "Content-Type: TBD";
+
+				for (String element: requestOutput) {
+					System.out.println(element);
+					toClientStream.writeBytes(element + "\r\n");
+				}
+			} 
+		}
+
 	/**
 	 * Loops forever, reading a line from the client, printing it to the screen,
 	 * then echoing it back.
 	 *
 	 * @throws (@link IOException} if a communication error occurs.
-	 */
 	public void echoLoop() throws IOException {
 		while (true) {
 			String blob = fromClientStream.readLine();
@@ -60,6 +87,7 @@ public final class Server {
 			toClientStream.writeBytes(blob + '\n');
 		}	
 	}	
+*/
 				
 	public static void main(String argv[]) {
 		Map<String, String> flags = Utils.parseCmdlineFlags(argv);
@@ -80,7 +108,7 @@ public final class Server {
 		try {
 			server.bind();
 			if (server.acceptFromClient()) {
-				server.echoLoop();
+				server.parseRequest();
 			} else {
 				System.out.println("Error accepting client connection.");
 			}
