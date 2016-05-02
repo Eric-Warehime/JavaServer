@@ -119,9 +119,10 @@ public final class Server {
 			input = new FileInputStream(pathToFile);
 			int c;
 			while((c = input.read()) != -1) {
-				System.out.println("this is a byte" + c);
+				//System.out.println("this is a byte" + c);
 				toClientStream.write(c);
 			}
+			toClientStream.writeBytes("\r\n");
 		}
 		catch(Exception e) {
 			System.out.println("exception in writeFileBytes " + e); 
@@ -158,6 +159,15 @@ public final class Server {
 				writeFileBytes("www/" + requestTokens[1]);
 				}
 			}
+			else {
+				DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm:ss");
+				Date dateobj = new Date();
+				String[] requestOutput = {"HTTP/1.1 403 Forbidden",df.format(dateobj),"Server: Eric/Shuaib's Server!!!","Last-Modified: ","Content-Length: ","Content-Type: "};
+				for (String element: requestOutput) {
+					toClientStream.writeBytes(element + "\r\n");
+					System.out.println(element);
+				}
+			}
 		}
 
 	/**
@@ -191,11 +201,15 @@ public final class Server {
 
 		Server server = new Server(serverPort);
 		try {
-			server.bind();
-			if (server.acceptFromClient()) {
-				server.parseRequest();
-			} else {
-				System.out.println("Error accepting client connection.");
+			while(true) {
+				server.bind();
+				if (server.acceptFromClient()) {
+					server.parseRequest();
+				} else {
+					System.out.println("Error accepting client connection.");
+				}
+				server.fromClientStream.close();
+				server.socket.close();
 			}
 		} catch (IOException e) {
 			System.out.println("Error communicating with client. aborting. Details: " + e);
