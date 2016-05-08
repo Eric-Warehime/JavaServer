@@ -76,7 +76,7 @@ public final class Server {
 		}
 		catch(Exception e) {System.out.println("caught in the redirect " + e);}
 		File requestedFile = new File("www/" + pathToFile);
-		if(!requestedFile.exists()) {
+		if(!requestedFile.exists()|| pathToFile.equals("/redirect.defs")) {
 			//return 404
 			returnArray[0] = "404 Not Found";
 			returnArray[1] = "";
