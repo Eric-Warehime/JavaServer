@@ -53,7 +53,7 @@ public final class Server {
 
 	public String[] requestFileInfo(String pathToFile) {
 		System.out.println(pathToFile);
-		String[] returnArray = new String[4];
+		String[] returnArray = new String[5];
 		File redirectFile = new File("www/redirect.defs");
 		try {
 			BufferedReader buff = new BufferedReader(new FileReader(redirectFile));
@@ -66,10 +66,11 @@ public final class Server {
 				String delims = "[ ]";
 				String [] lineWords =  line.split(delims);
 				if(pathToFile.equals(lineWords[0])) {
-					returnArray[0] = "301 " + lineWords[1];
+					returnArray[0] = "301 Moved Permanently";
 					returnArray[1] = "";
 					returnArray[2] = "";
 					returnArray[3] = "";
+					returnArray[4] = lineWords[1];
 					return returnArray;
 				}
 			}
@@ -138,7 +139,7 @@ public final class Server {
 			if (requestTokens[0].equals("HEAD") || requestTokens[0].equals("GET")) {
 				String[] outputFileInfo = new String[4];
 				outputFileInfo = requestFileInfo(requestTokens[1]);
-				String [] requestOutput = new String[7];
+				String [] requestOutput = new String[8];
 				requestOutput[0] = requestTokens[2] + " " + outputFileInfo[0];
 				requestOutput[1] = "Connection: close";
 				
@@ -149,6 +150,7 @@ public final class Server {
 				requestOutput[4] = "Last-Modified: " + outputFileInfo[1];
 				requestOutput[5] = "Content-Length: " + outputFileInfo[2];
 				requestOutput[6] = "Content-Type: " + outputFileInfo[3];
+				requestOutput[7] = "Location: " + outputFileInfo[4];
 
 				for (String element: requestOutput) {
 					System.out.println(element);
