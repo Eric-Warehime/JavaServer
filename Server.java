@@ -117,6 +117,7 @@ public final class Server {
 		System.out.println("we are calling the writefilebytes func");
 		FileInputStream input = null;
 		try {
+			toClientStream.writeBytes("\r\n");
 			input = new FileInputStream(pathToFile);
 			int c;
 			while((c = input.read()) != -1) {
