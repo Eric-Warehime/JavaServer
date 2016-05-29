@@ -14,27 +14,24 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.*;
 import java.security.KeyStore;
 
-public final class Server implements Runnable {
+public final class Server {
 	private boolean isHTTPS;
 	private final int serverPort;
+	private final int sslServerPort;
 	private ServerSocket socket;
 	private SSLServerSocket sslsocket;
 	private DataOutputStream toClientStream;
 	private BufferedReader fromClientStream;
+	private DataOutputStream toSSLClientStream;
+	private BufferedReader fromSSLClientStream;
 
 	public Server(int port, boolean isHTTPS) {
 		this.isHTTPS = isHTTPS;
-		this.serverPort = port;
-	}
-
-	public void run() {
 		if(isHTTPS) {
-			System.out.println("Starting up HTTPS Server.");
-			startHTTPS(serverPort);
+			this.sslServerPort = port;
 		}
 		else {
-			System.out.println("Starting up HTTP Server.");
-			startHTTP(serverPort);
+			this.serverPort = port;
 		}
 	}
 
@@ -68,7 +65,7 @@ public final class Server implements Runnable {
 		TrustManager[] trustman = tmf.getTrustManagers();
 		sslcont.init(kmf.getKeyManagers(),trustman,null);
 		SSLServerSocketFactory sslsockfactory = sslcont.getServerSocketFactory();
-		sslsocket = (SSLServerSocket) sslsockfactory.createServerSocket(serverPort);
+		sslsocket = (SSLServerSocket) sslsockfactory.createServerSocket(sslServerPort);
 		System.out.println(sslsocket);
 		sslsock = (SSLSocket) sslsocket.accept();
 		toClientStream = new DataOutputStream(sslsock.getOutputStream());
@@ -167,6 +164,7 @@ public final class Server implements Runnable {
 		return returnArray;
 	}
 		
+		sslServerPort
 	public void writeFileBytes(String pathToFile) {
 		System.out.println("we are calling the writefilebytes func");
 		FileInputStream input = null;
@@ -190,7 +188,6 @@ public final class Server implements Runnable {
 		
 			String requestLine = fromClientStream.readLine();
 			String delims = "[ ]";
-			System.out.println(requestLine);
 			String [] requestTokens = requestLine.split(delims);
 			if (requestTokens[0].equals("HEAD") || requestTokens[0].equals("GET")) {
 				String[] outputFileInfo = new String[4];
@@ -241,38 +238,6 @@ public final class Server implements Runnable {
 		}	
 	}	
 */
-
-	private void startHTTP(int port) {
-		try {
-				while(true) {
-					this.bind();
-					if(this.acceptFromClient()) {
-						this.parseRequest();
-					} else {
-						System.out.println("Error connecting on HTTP server.");
-					}
-					this.fromClientStream.close();
-					this.socket.close();
-				}
-		} catch (IOException e) {
-			System.out.println("Error communicating with HTTP client. Aborting. Details: " + e);
-		}
-	}
-
-	private void startHTTPS(int port) {
-		try {
-			while(true) {
-				if(this.acceptSSLFromClient()) {
-					this.parseRequest();
-				}
-				else {
-					System.out.println("Error starting HTTPS connection.");
-				}
-			}
-		} catch (IOException e) {
-			System.out.println("Error communicating with HTTPS client. aborting. Details: " + e);
-		}
-	}
 				
 	public static void main(String argv[]) {
 		Map<String, String> flags = Utils.parseCmdlineFlags(argv);
@@ -294,31 +259,28 @@ public final class Server implements Runnable {
 			System.out.println("Invalid port number! Must be an integer.");
 			System.exit(-1);
 		}
-		//start HTTP and HTTPS servers on separate threads listening on their respective ports
-		new Thread(new Server(sslServerPort,true)).start();
-		new Thread(new Server(serverPort,false)).start();
 
-		// Server server = new Server(serverPort,sslServerPort);
-		// try {
-		// 	while(true) {
-		// 		//server.bind();
-		// 		if(server.acceptSSLFromClient()) {
-		// 			server.parseRequest();
-		// 		}
-		// 		else {
-		// 			System.out.println("nope");
-		// 		}
-		// 		if (server.acceptFromClient()) {
-		// 			server.parseRequest();
-		// 		} else {
-		// 			System.out.println("Error accepting client connection.");
-		// 		}
-		// 		//server.fromClientStream.close();
-		// 		//server.sslsocket.close();
-		// 	}
-		// } catch (IOException e) {
-		// 	System.out.println("Error communicating with client. aborting. Details: " + e);
-		// }
+		Server server = new Server(serverPort,sslServerPort);
+		try {
+			while(true) {
+				//server.bind();
+				if(server.acceptSSLFromClient()) {
+					server.parseRequest();
+				}
+				else {
+					System.out.println("nope");
+				}
+				/*if (server.acceptFromClient()) {
+					server.parseRequest();
+				} else {
+					System.out.println("Error accepting client connection.");
+				}*/
+				//server.fromClientStream.close();
+				//server.sslsocket.close();
+			}
+		} catch (IOException e) {
+			System.out.println("Error communicating with client. aborting. Details: " + e);
+		}
 	}
 }
 
