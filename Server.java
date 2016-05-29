@@ -18,9 +18,9 @@ public final class Server implements Runnable {
 	private boolean isHTTPS;
 	private final int serverPort;
 	private ServerSocket socket;
-	private SSLServerSocket sslsocket;
 	private DataOutputStream toClientStream;
 	private BufferedReader fromClientStream;
+	private Socket clientSocket;
 
 	public Server(int port, boolean isHTTPS) {
 		this.isHTTPS = isHTTPS;
@@ -56,30 +56,44 @@ public final class Server implements Runnable {
 	}
 
 	public boolean acceptSSLFromClient() throws IOException {
-		SSLSocket sslsock;
+		//ServerSocket sslsock;
 		try {
 		KeyStore store = KeyStore.getInstance("JKS");
 		store.load(new FileInputStream("server.jks"), "password".toCharArray());
+		
 		KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 		kmf.init(store,"password".toCharArray());
-		TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-		tmf.init(store);
-		SSLContext sslcont = SSLContext.getInstance("TLS");
-		TrustManager[] trustman = tmf.getTrustManagers();
-		sslcont.init(kmf.getKeyManagers(),trustman,null);
-		SSLServerSocketFactory sslsockfactory = sslcont.getServerSocketFactory();
-		sslsocket = (SSLServerSocket) sslsockfactory.createServerSocket(serverPort);
-		System.out.println(sslsocket);
-		sslsock = (SSLSocket) sslsocket.accept();
-		toClientStream = new DataOutputStream(sslsock.getOutputStream());
-		System.out.println(sslsock);
-		fromClientStream = new BufferedReader(new InputStreamReader(sslsock.getInputStream()));
-		}
-		catch (Exception e) {
+		
+		//TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+		//tmf.init(store);
+		
+		SSLContext sslContext = SSLContext.getInstance("TLS");
+		//TrustManager[] trustman = tmf.getTrustManagers();
+		sslContext.init(kmf.getKeyManagers(),null, null);
+		
+		SSLServerSocketFactory sslsockfactory = sslContext.getServerSocketFactory();
+		socket = (SSLServerSocket) sslsockfactory.createServerSocket(serverPort);
+		
+		((SSLServerSocket) socket).setNeedClientAuth(false);
+
+		}catch (Exception e) {
 			System.out.println("found exception " + e);
 			return false;
 		}
 		return true;
+	}
+	
+	public void acceptSSL() {
+		try {
+			clientSocket = socket.accept();
+			toClientStream = new DataOutputStream(clientSocket.getOutputStream());
+		
+		fromClientStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+		}
+		catch(Exception e) {
+			System.out.println("found exception accepting from ssl client socket " + e);
+		}
 	}
 
 	/**
@@ -261,13 +275,11 @@ public final class Server implements Runnable {
 
 	private void startHTTPS(int port) {
 		try {
+			this.acceptSSLFromClient();
 			while(true) {
-				if(this.acceptSSLFromClient()) {
-					this.parseRequest();
-				}
-				else {
-					System.out.println("Error starting HTTPS connection.");
-				}
+				this.acceptSSL();
+				this.parseRequest();
+				this.clientSocket.close();
 			}
 		} catch (IOException e) {
 			System.out.println("Error communicating with HTTPS client. aborting. Details: " + e);
@@ -295,8 +307,10 @@ public final class Server implements Runnable {
 			System.exit(-1);
 		}
 		//start HTTP and HTTPS servers on separate threads listening on their respective ports
-		new Thread(new Server(sslServerPort,true)).start();
-		new Thread(new Server(serverPort,false)).start();
+		Server server = new Server(serverPort,false);
+		Server sslServer = new Server(sslServerPort,true);
+		new Thread(server).start();
+		new Thread(sslServer).start();
 
 		// Server server = new Server(serverPort,sslServerPort);
 		// try {
